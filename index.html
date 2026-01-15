@@ -1,0 +1,1347 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>PRIZE LAND • Admin Panel</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      /* i6: yengil (glow/gradient/blur yo‘q) */
+      --bg0:#070912;
+      --bg1:#0b1020;
+      --line: rgba(255,255,255,.12);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.62);
+      --muted2: rgba(255,255,255,.46);
+
+      /* i5: ranglar 1 xil (KPI ↔ Chart) */
+      --cRev:#3b82f6;     /* Tushum */
+      --cCost:#ff4d7d;    /* Xarajat */
+      --cProfit:#f59e0b;  /* Sof foyda */
+
+      /* i8: pushti yurak o‘rniga pushti yumaloq (dot) */
+      --pink:#ff4d7d;
+
+      --r16:16px;
+      --r20:20px;
+      --r24:24px;
+
+      --pad: 16px;
+    }
+
+    *{box-sizing:border-box}
+    html, body { height:auto; min-height:100%; } /* i1/i5: ekran mos */
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+      background: linear-gradient(180deg, var(--bg0), var(--bg1));
+      color:var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+
+      /* i1/i5: tabbar yopmasin */
+      padding-bottom: calc(140px + env(safe-area-inset-bottom));
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px var(--pad) 0;
+
+      /* i1/i5: oxiri doim ko‘rinsin */
+      padding-bottom: calc(160px + env(safe-area-inset-bottom));
+    }
+
+    /* Header */
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding: 10px 12px;
+      border:1px solid var(--line);
+      border-radius: var(--r24);
+      background: rgba(255,255,255,.06);
+
+      /* i6: blur/shadow yo‘q (tez) */
+      position: sticky;
+      top: 12px;
+      z-index: 10;
+    }
+
+    .brand{display:flex; align-items:center; gap:10px; min-width:0}
+    .logo{
+      width: 40px; height: 40px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.14);
+      position: relative;
+    }
+    /* i8: pushti yumaloq indikator */
+    .logo:after{
+      content:"";
+      position:absolute;
+      width:10px; height:10px;
+      right: -2px; top: -2px;
+      border-radius:999px;
+      background: var(--pink);
+      border: 2px solid rgba(7,9,18,.95);
+    }
+
+    .brandText{min-width:0}
+    .brandText .title{
+      font-weight: 1000;
+      letter-spacing: .3px;
+      font-size: 14px;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .brandText .sub{
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topActions{display:flex; gap:8px; align-items:center}
+
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      padding: 8px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      user-select:none;
+      max-width: 220px;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .chip b{color: var(--text); font-weight:1000}
+
+    /* i6: transition/animation yo‘q */
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 1000;
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space: nowrap;
+    }
+    .btn:active{transform: scale(.98)}
+    .btn.primary{
+      border-color: rgba(59,130,246,.35);
+      background: rgba(59,130,246,.12);
+    }
+    .btn.danger{
+      border-color: rgba(255,77,125,.35);
+      background: rgba(255,77,125,.10);
+    }
+
+    /* Layout */
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    @media (max-width: 880px){ .grid{grid-template-columns: 1fr} }
+
+    .card{
+      border:1px solid var(--line);
+      border-radius: var(--r24);
+      background: rgba(255,255,255,.06);
+      padding: 14px;
+    }
+    .card h2{
+      margin:0 0 10px;
+      font-size: 14px;
+      letter-spacing: .2px;
+      font-weight: 1000;
+    }
+
+    .muted{color: var(--muted); font-size: 12px}
+    .sep{height:1px; background: var(--line); margin: 12px 0}
+
+    /* Form */
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 520px){ .row{grid-template-columns: 1fr} }
+
+    label{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 6px;
+      font-weight: 900;
+    }
+    .field{display:flex; flex-direction:column; gap:6px}
+
+    input, select, textarea{
+      width:100%;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline:none;
+      font-size: 14px;
+    }
+    input::placeholder, textarea::placeholder{color: rgba(255,255,255,.35)}
+    textarea{min-height: 92px; resize: vertical}
+
+    .inline{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+
+    /* KPI */
+    .kpis{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top: 10px;
+    }
+    .kpi{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      border-radius: var(--r20);
+      padding: 12px;
+    }
+    .kpi .k{font-size:12px; color:var(--muted); font-weight:900}
+    .kpi .v{font-size:18px; font-weight:1000; margin-top:6px}
+    .kpi .hint{font-size:11px; color:var(--muted2); margin-top:6px}
+
+    /* i5: rang badge */
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.14);
+      font-size: 12px;
+      font-weight: 1000;
+      user-select:none;
+      background: rgba(255,255,255,.04);
+    }
+    .b-rev{border-color: rgba(59,130,246,.45)}
+    .b-cost{border-color: rgba(255,77,125,.45)}
+    .b-profit{border-color: rgba(245,158,11,.45)}
+
+    /* Table */
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow:hidden;
+      border-radius: var(--r20);
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+    }
+    th, td{
+      text-align:left;
+      padding: 10px 10px;
+      font-size: 12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      vertical-align:top;
+    }
+    th{
+      color: var(--muted);
+      background: rgba(255,255,255,.05);
+      font-weight: 1000;
+    }
+    tr:last-child td{border-bottom:none}
+    .right{text-align:right}
+    .tiny{font-size:11px; color: var(--muted2)}
+
+    /* Pages */
+    .page{display:none}
+    .page.active{display:block}
+
+    /* Bottom tabbar */
+    .tabbar{
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+      background: rgba(7,9,18,.92);
+      border-top: 1px solid rgba(255,255,255,.10);
+      z-index: 20;
+    }
+    .tabs{
+      max-width: 980px;
+      margin: 0 auto;
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .tab{
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      border-radius: 18px;
+      padding: 10px 8px;
+      text-align:center;
+      cursor:pointer;
+      user-select:none;
+      color: var(--muted);
+      font-weight: 1000;
+      font-size: 12px;
+    }
+    .tab:active{transform: scale(.98)}
+    .tab.active{
+      color: rgba(255,255,255,.92);
+      border-color: rgba(255,255,255,.18);
+      background: rgba(255,255,255,.10);
+    }
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: calc(128px + env(safe-area-inset-bottom)); /* i1/i5 */
+      transform: translateX(-50%) translateY(18px);
+      opacity: 0;
+      pointer-events:none;
+      background: rgba(0,0,0,.78);
+      border: 1px solid rgba(255,255,255,.12);
+      padding: 10px 12px;
+      border-radius: 16px;
+      color: rgba(255,255,255,.92);
+      max-width: min(520px, calc(100% - 24px));
+      font-size: 13px;
+      z-index: 30;
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast small{color: var(--muted); display:block; margin-top:4px}
+
+    /* i5: chart canvas height */
+    #chartDaily{
+      width:100% !important;
+      height:240px !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="brandText">
+          <div class="title">PRIZE LAND • Admin Panel</div>
+          <div class="sub">Hisob-kitob • Daromad • Hisobot</div>
+        </div>
+      </div>
+
+      <div class="topActions">
+        <div class="chip" title="Joriy apparat">
+          🕹 <b id="activeMachineName">Aparat #1</b>
+        </div>
+        <button class="btn danger" id="btnReset">🗑 Tozalash</button>
+      </div>
+    </div>
+
+    <!-- 1) DASHBOARD -->
+    <section class="page active" id="page-dashboard">
+      <div class="grid">
+        <div class="card">
+          <h2>📌 Dashboard</h2>
+
+          <div class="row">
+            <div class="field">
+              <label>Apparat</label>
+              <select id="machineSelect"></select>
+            </div>
+
+            <div class="field">
+              <label>Oraliq</label>
+              <select id="weekPreset">
+                <option value="7">So‘nggi 7 kun</option>
+                <option value="14">So‘nggi 14 kun</option>
+                <option value="30">So‘nggi 30 kun</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="kpis">
+            <div class="kpi">
+              <div class="k">Umumiy tushum</div>
+              <div class="v" id="kpiRevenue">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+            <div class="kpi">
+              <div class="k">O‘yinchoq xarajat</div>
+              <div class="v" id="kpiToyCost">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Arenda (proporsiya)</div>
+              <div class="v" id="kpiRent">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Sof foyda</div>
+              <div class="v" id="kpiProfit">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <!-- i2: izohlar yo‘q, faqat badge -->
+          <div class="inline">
+            <span class="badge b-rev">🔵 Tushum</span>
+            <span class="badge b-cost">🩷 Xarajat</span>
+            <span class="badge b-profit">🟠 Sof foyda</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>📈 Statistika</h2>
+          <canvas id="chartDaily"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) DAILY INPUT (i7: bu yerda faqat kunlik kiritish) -->
+    <section class="page" id="page-daily">
+      <div class="grid">
+        <div class="card">
+          <h2>🧾 Kunlik kiritish</h2>
+
+          <div class="row">
+            <div class="field">
+              <label>Sana</label>
+              <input type="date" id="dailyDate"/>
+            </div>
+            <div class="field">
+              <label>Tushum (so‘m)</label>
+              <input type="number" id="dailyRevenue" placeholder="250000" min="0" inputmode="numeric"/>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div class="field">
+              <label>Qo‘shilgan o‘yinchoq (so‘m)</label>
+              <input type="number" id="dailyToyAdd" placeholder="50000" min="0" inputmode="numeric"/>
+            </div>
+            <div class="field">
+              <label>Izoh</label>
+              <input type="text" id="dailyNote" placeholder="..."/>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="inline">
+            <button class="btn primary" id="btnAddDaily">✅ Saqlash</button>
+            <button class="btn" id="btnFillExample">✨ Misol</button>
+          </div>
+
+          <div class="sep"></div>
+
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sana</th>
+                  <th class="right">Tushum</th>
+                  <th class="right">O‘yinchoq</th>
+                  <th>Izoh</th>
+                  <th class="right">Amal</th>
+                </tr>
+              </thead>
+              <tbody id="dailyTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🧰 Tez amallar</h2>
+          <div class="inline">
+            <button class="btn" id="btnDemoData">🧪 Demo</button>
+            <button class="btn danger" id="btnWipeAll">🧨 Hammasini o‘chirish</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3) REPORT -->
+    <section class="page" id="page-report">
+      <div class="grid">
+        <div class="card">
+          <h2>🧮 Hisobot</h2>
+
+          <div class="row">
+            <div class="field">
+              <label>Boshlanish</label>
+              <input type="date" id="weekStart"/>
+            </div>
+            <div class="field">
+              <label>Tugash</label>
+              <input type="date" id="weekEnd"/>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div class="field">
+              <label>Bosh inventar (so‘m)</label>
+              <input type="number" id="invStart" placeholder="0" min="0" inputmode="numeric"/>
+            </div>
+            <div class="field">
+              <label>Oxir inventar (so‘m)</label>
+              <input type="number" id="invEnd" placeholder="0" min="0" inputmode="numeric"/>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="inline">
+            <button class="btn primary" id="btnCalcWeek">📌 Hisobla</button>
+            <button class="btn" id="btnSaveWeekReport">💾 Saqlash</button>
+            <button class="btn" id="btnCopyReport">📋 Nusxa</button>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="kpis">
+            <div class="kpi">
+              <div class="k">Tushum</div>
+              <div class="v" id="rRevenue">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+            <div class="kpi">
+              <div class="k">COGS</div>
+              <div class="v" id="rCOGS">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Arenda</div>
+              <div class="v" id="rRent">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Sof foyda</div>
+              <div class="v" id="rProfit">0</div>
+              <div class="hint">so‘m</div>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+          <textarea id="reportText" placeholder="Hisobot..."></textarea>
+        </div>
+
+        <div class="card">
+          <h2>📚 Saqlangan hisobotlar</h2>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Oraliq</th>
+                  <th class="right">Tushum</th>
+                  <th class="right">COGS</th>
+                  <th class="right">Arenda</th>
+                  <th class="right">Foyda</th>
+                  <th class="right">Amal</th>
+                </tr>
+              </thead>
+              <tbody id="reportsTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4) ADMIN (i7: Sozlamalar shu yerda, i8: export yo‘q) -->
+    <section class="page" id="page-settings">
+      <div class="grid">
+
+        <!-- i7: Sozlamalar shu yerga ko‘chirildi -->
+        <div class="card">
+          <h2>⚙️ Sozlamalar</h2>
+
+          <div class="field">
+            <label>Apparat nomi</label>
+            <input type="text" id="machineName" placeholder="Masalan: Aparat #1 (Chorsu)"/>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div class="field">
+              <label>Oylik arenda (so‘m)</label>
+              <input type="number" id="monthlyRent" placeholder="1000000" min="0" inputmode="numeric"/>
+            </div>
+            <div class="field">
+              <label>Oy kunlari (28–31)</label>
+              <input type="number" id="monthDays" placeholder="30" min="28" max="31" inputmode="numeric"/>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="inline">
+            <button class="btn primary" id="btnSaveSettings">💾 Saqlash</button>
+            <button class="btn" id="btnAddMachine">➕ Apparat</button>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="row">
+            <div class="field">
+              <label>Haftalik boshqa xarajat (so‘m)</label>
+              <input type="number" id="weeklyOtherCost" placeholder="0" min="0" inputmode="numeric"/>
+            </div>
+            <div class="field">
+              <label>Izoh</label>
+              <input type="text" id="weeklyOtherNote" placeholder="..."/>
+            </div>
+          </div>
+
+          <div class="inline" style="margin-top:10px">
+            <button class="btn" id="btnSaveOtherCost">✅ Saqlash</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🛠 Admin</h2>
+          <div class="inline">
+            <button class="btn" id="btnDemoData2">🧪 Demo</button>
+            <button class="btn danger" id="btnWipeAll2">🧨 Hammasini o‘chirish</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🧹 Xizmat</h2>
+          <div class="inline">
+            <button class="btn danger" id="btnReset2">🗑 Tanlangan apparatni tozalash</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <!-- TABBAR -->
+  <div class="tabbar">
+    <div class="tabs">
+      <div class="tab active" data-tab="dashboard">🏠</div>
+      <div class="tab" data-tab="daily">🧾</div>
+      <div class="tab" data-tab="report">🧮</div>
+      <div class="tab" data-tab="settings">⚙️</div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /***********************
+     * PRIZE LAND Admin Panel
+     * i + i1 + i2 + i3 + i4 + i5 + i6 + i7 + i8 (FINAL)
+     *
+     * i1: ekran mos (padding/min-height/toast bottom)
+     * i2: clean UI (keraksiz izoh yo‘q)
+     * i3: tezlashtirish (chart destroy yo‘q, yengil render, debounce)
+     * i4: qotmaslik (entryByDate, raf render queue, chart debounce, fmt cache)
+     * i5: ranglar mos (CSS vars → chart colors), canvas height, maintainAspectRatio false
+     * i6: effektlar o‘chirilgan (blur/glow/transition/animation minimal)
+     * i7: Sozlamalar blokini Admin sahifasiga ko‘chirish
+     * i8: Export butunlay olib tashlandi + pushti yurak o‘rniga pushti yumaloq indikator
+     ************************/
+
+    const LS_KEY = "prizeland_admin_final_v2";
+    const $ = (id)=>document.getElementById(id);
+
+    // i4: fmt cache
+    const _fmtCache = new Map();
+    const fmt = (n)=>{
+      n = Number(n||0);
+      const key = String(n);
+      const hit = _fmtCache.get(key);
+      if(hit) return hit;
+      const v = n.toLocaleString("uz-UZ");
+      if(_fmtCache.size > 5000) _fmtCache.clear();
+      _fmtCache.set(key, v);
+      return v;
+    };
+
+    const todayISO = ()=>{
+      const d = new Date();
+      const tz = d.getTimezoneOffset() * 60000;
+      return new Date(Date.now()-tz).toISOString().slice(0,10);
+    };
+
+    const addDays = (iso, days)=>{
+      const d = new Date(iso+"T00:00:00");
+      d.setDate(d.getDate()+days);
+      const tz = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime()-tz).toISOString().slice(0,10);
+    };
+
+    const betweenDays = (startISO, endISO)=>{
+      const a = new Date(startISO+"T00:00:00").getTime();
+      const b = new Date(endISO+"T00:00:00").getTime();
+      const diff = Math.round((b-a)/(1000*60*60*24));
+      return diff >= 0 ? diff + 1 : 0;
+    };
+
+    const toast = (msg, sub="")=>{
+      const t = $("toast");
+      t.innerHTML = `${msg}${sub?`<small>${sub}</small>`:""}`;
+      t.classList.add("show");
+      setTimeout(()=>t.classList.remove("show"), 1600);
+      try{ navigator.vibrate && navigator.vibrate(8); }catch(e){}
+    };
+
+    const uid = ()=> (crypto.randomUUID ? crypto.randomUUID() : (String(Date.now())+Math.random()));
+
+    const defaultMachine = (name="Aparat #1")=>({
+      id: uid(),
+      name,
+      monthlyRent: 0,
+      monthDays: 30,
+      weeklyOtherCost: 0,
+      weeklyOtherNote: "",
+      entryByDate: {}, // { "YYYY-MM-DD": {id,date,revenue,toyAdd,note} }
+      reports: []
+    });
+
+    const defaultData = ()=>({
+      machines: [ defaultMachine() ],
+      activeMachineId: null
+    });
+
+    function migrateMachine(m){
+      if(!m.id) m.id = uid();
+      if(!m.name) m.name = "Aparat";
+      m.monthlyRent = Number(m.monthlyRent||0);
+      m.monthDays = Number(m.monthDays||30);
+      m.weeklyOtherCost = Number(m.weeklyOtherCost||0);
+      m.weeklyOtherNote = String(m.weeklyOtherNote||"");
+
+      if(!m.entryByDate || typeof m.entryByDate!=="object") m.entryByDate = {};
+
+      // legacy entries → entryByDate (agar bo‘lsa)
+      if(Array.isArray(m.entries)){
+        for(const e of m.entries){
+          if(!e || !e.date) continue;
+          const date = e.date;
+          const id = e.id || uid();
+          m.entryByDate[date] = {
+            id,
+            date,
+            revenue: Number(e.revenue||0),
+            toyAdd: Number(e.toyAdd||0),
+            note: String(e.note||"")
+          };
+        }
+      }
+      if(!Array.isArray(m.reports)) m.reports = [];
+      return m;
+    }
+
+    const loadDB = ()=>{
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(!raw) return defaultData();
+        const db = JSON.parse(raw);
+        if(!db.machines || !Array.isArray(db.machines)) return defaultData();
+        db.machines = db.machines.map(migrateMachine);
+        if(!db.activeMachineId) db.activeMachineId = db.machines[0]?.id || null;
+        if(db.activeMachineId && !db.machines.some(x=>x.id===db.activeMachineId)){
+          db.activeMachineId = db.machines[0]?.id || null;
+        }
+        return db;
+      }catch(e){
+        return defaultData();
+      }
+    };
+
+    let DB = loadDB();
+    const saveDB = ()=> localStorage.setItem(LS_KEY, JSON.stringify(DB));
+
+    const getMachine = ()=> DB.machines.find(m=>m.id===DB.activeMachineId) || DB.machines[0];
+
+    function setActiveMachine(id){
+      DB.activeMachineId = id;
+      saveDB();
+      renderMachineSelect();
+      requestRender();
+      toast("✅ Tanlandi", getMachine().name);
+    }
+
+    /********* Tabs *********/
+    const pages = {
+      dashboard: $("page-dashboard"),
+      daily: $("page-daily"),
+      report: $("page-report"),
+      settings: $("page-settings")
+    };
+
+    function openTab(key){
+      Object.values(pages).forEach(p=>p.classList.remove("active"));
+      pages[key].classList.add("active");
+      document.querySelectorAll(".tab").forEach(t=>{
+        t.classList.toggle("active", t.dataset.tab===key);
+      });
+
+      if(key==="dashboard") requestChart();
+      if(key==="report") renderReportsTable();
+    }
+
+    document.querySelectorAll(".tab").forEach(t=>{
+      t.addEventListener("click", ()=>openTab(t.dataset.tab));
+    });
+
+    /********* i4: render queue *********/
+    let renderQueued = false;
+    function requestRender(){
+      if(renderQueued) return;
+      renderQueued = true;
+      requestAnimationFrame(()=>{
+        renderQueued = false;
+        renderDailyTable();
+        renderKPIs();
+        requestChart();
+        renderReportsTable();
+        // settings inputs sync (i7)
+        syncSettingsInputs();
+      });
+    }
+
+    /********* i4: chart debounce *********/
+    let chartT = null;
+    function requestChart(){
+      clearTimeout(chartT);
+      chartT = setTimeout(()=>renderChart(), 80);
+    }
+
+    /********* Machine Select *********/
+    function renderMachineSelect(){
+      const sel = $("machineSelect");
+      sel.innerHTML = "";
+      DB.machines.forEach(m=>{
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = m.name || "Nomsiz apparat";
+        sel.appendChild(opt);
+      });
+
+      sel.value = DB.activeMachineId;
+      sel.onchange = ()=>setActiveMachine(sel.value);
+
+      const m = getMachine();
+      $("activeMachineName").textContent = m.name || "Aparat";
+    }
+
+    function syncSettingsInputs(){
+      const m = getMachine();
+      // i7: Sozlamalar admin sahifasida bo‘lsa ham qiymatlarni yangilab turamiz
+      if($("machineName")) $("machineName").value = m.name || "";
+      if($("monthlyRent")) $("monthlyRent").value = m.monthlyRent ?? 0;
+      if($("monthDays")) $("monthDays").value = m.monthDays ?? 30;
+      if($("weeklyOtherCost")) $("weeklyOtherCost").value = m.weeklyOtherCost ?? 0;
+      if($("weeklyOtherNote")) $("weeklyOtherNote").value = m.weeklyOtherNote ?? "";
+    }
+
+    /********* Data ops (entryByDate) *********/
+    function addDailyEntry(){
+      const m = getMachine();
+      const date = $("dailyDate").value || todayISO();
+      const revenue = Number($("dailyRevenue").value || 0);
+      const toyAdd = Number($("dailyToyAdd").value || 0);
+      const note = ($("dailyNote").value || "").trim();
+
+      if(revenue<=0 && toyAdd<=0){
+        toast("⚠️ Qiymat kiriting");
+        return;
+      }
+
+      const old = m.entryByDate[date];
+      const id = old?.id || uid();
+      m.entryByDate[date] = { id, date, revenue, toyAdd, note };
+
+      saveDB();
+
+      $("dailyRevenue").value = "";
+      $("dailyToyAdd").value = "";
+      $("dailyNote").value = "";
+      $("dailyDate").value = todayISO();
+
+      toast("✅ Saqlandi", date);
+      requestRender();
+    }
+
+    function deleteDailyEntry(id){
+      const m = getMachine();
+      let delDate = null;
+      for(const d in m.entryByDate){
+        if(m.entryByDate[d]?.id === id){ delDate = d; break; }
+      }
+      if(!delDate) return;
+
+      delete m.entryByDate[delDate];
+      saveDB();
+      toast("🗑 O‘chirildi", delDate);
+      requestRender();
+    }
+
+    /********* Settings *********/
+    function saveSettings(){
+      const m = getMachine();
+      m.name = ($("machineName").value || "Aparat").trim();
+      m.monthlyRent = Number($("monthlyRent").value || 0);
+      m.monthDays = Math.min(31, Math.max(28, Number($("monthDays").value || 30)));
+      saveDB();
+      renderMachineSelect();
+      requestRender();
+      toast("💾 Saqlandi");
+    }
+
+    function addMachine(){
+      const name = `Aparat #${DB.machines.length+1}`;
+      const m = defaultMachine(name);
+      DB.machines.push(m);
+      DB.activeMachineId = m.id;
+      saveDB();
+      renderMachineSelect();
+      requestRender();
+      toast("➕ Qo‘shildi", name);
+    }
+
+    function saveOtherCost(){
+      const m = getMachine();
+      m.weeklyOtherCost = Number($("weeklyOtherCost").value || 0);
+      m.weeklyOtherNote = ($("weeklyOtherNote").value || "").trim();
+      saveDB();
+      toast("✅ Saqlandi");
+      requestRender();
+    }
+
+    /********* KPI *********/
+    function calcRentForDays(m, days){
+      const md = Number(m.monthDays || 30);
+      const mr = Number(m.monthlyRent || 0);
+      return (mr / md) * days;
+    }
+
+    function sumEntriesWithin(m, days){
+      const end = todayISO();
+      const start = addDays(end, -(days-1));
+      let revenue = 0, toyAdd = 0;
+
+      const map = m.entryByDate || {};
+      for(const date in map){
+        if(date>=start && date<=end){
+          const e = map[date];
+          revenue += Number(e.revenue||0);
+          toyAdd += Number(e.toyAdd||0);
+        }
+      }
+      return {revenue, toyAdd, days};
+    }
+
+    function renderKPIs(){
+      const m = getMachine();
+      const days = Number($("weekPreset").value || 7);
+      const s = sumEntriesWithin(m, days);
+      const rent = calcRentForDays(m, days);
+      const other = (Number(m.weeklyOtherCost || 0) / 7) * days;
+      const profit = s.revenue - s.toyAdd - rent - other;
+
+      $("kpiRevenue").textContent = fmt(s.revenue);
+      $("kpiToyCost").textContent = fmt(s.toyAdd);
+      $("kpiRent").textContent = fmt(rent);
+      $("kpiProfit").textContent = fmt(profit);
+    }
+
+    /********* i5: Chart colors from CSS vars *********/
+    function cssVar(name){
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    let dailyChart = null;
+
+    function buildSeries(m, days){
+      const end = todayISO();
+      const start = addDays(end, -(days-1));
+
+      const labels = [];
+      const rev = [];
+      const cost = [];
+      const profit = [];
+
+      const rentPerDay = (Number(m.monthlyRent||0) / Number(m.monthDays||30));
+      const otherPerDay = (Number(m.weeklyOtherCost||0) / 7);
+      const map = m.entryByDate || {};
+
+      for(let i=0;i<days;i++){
+        const d = addDays(start, i);
+        labels.push(d.slice(5)); // MM-DD
+        const e = map[d];
+        const r = e ? Number(e.revenue||0) : 0;
+        const c = e ? Number(e.toyAdd||0) : 0;
+        rev.push(r);
+        cost.push(c);
+        profit.push(r - c - rentPerDay - otherPerDay);
+      }
+      return {labels, rev, cost, profit};
+    }
+
+    function renderChart(){
+      const m = getMachine();
+      const days = Number($("weekPreset").value || 7);
+      const s = buildSeries(m, days);
+
+      const canvas = $("chartDaily");
+      if(!canvas) return;
+
+      const cRev = cssVar("--cRev") || "#3b82f6";
+      const cCost = cssVar("--cCost") || "#ff4d7d";
+      const cProfit = cssVar("--cProfit") || "#f59e0b";
+
+      if(!dailyChart){
+        dailyChart = new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: s.labels,
+            datasets: [
+              { label:"Tushum", data: s.rev, borderColor:cRev, backgroundColor:cRev, pointBackgroundColor:cRev, pointBorderColor:cRev, tension:.35, borderWidth:2, pointRadius:2 },
+              { label:"Xarajat", data: s.cost, borderColor:cCost, backgroundColor:cCost, pointBackgroundColor:cCost, pointBorderColor:cCost, tension:.35, borderWidth:2, pointRadius:2 },
+              { label:"Sof foyda", data: s.profit, borderColor:cProfit, backgroundColor:cProfit, pointBackgroundColor:cProfit, pointBorderColor:cProfit, tension:.35, borderWidth:2, pointRadius:2 }
+            ]
+          },
+          options: {
+            responsive:true,
+            maintainAspectRatio:false, /* i5 */
+            animation:false,           /* i3/i6 */
+            plugins:{
+              legend:{ labels:{ color:"rgba(255,255,255,.75)" } },
+              tooltip:{
+                callbacks:{
+                  label:(ctx)=> `${ctx.dataset.label}: ${fmt(Number(ctx.parsed.y||0))} so‘m`
+                }
+              }
+            },
+            scales:{
+              x:{ ticks:{ color:"rgba(255,255,255,.55)" }, grid:{ color:"rgba(255,255,255,.06)" } },
+              y:{ ticks:{ color:"rgba(255,255,255,.55)" }, grid:{ color:"rgba(255,255,255,.06)" } }
+            }
+          }
+        });
+        return;
+      }
+
+      dailyChart.data.labels = s.labels;
+      dailyChart.data.datasets[0].data = s.rev;
+      dailyChart.data.datasets[1].data = s.cost;
+      dailyChart.data.datasets[2].data = s.profit;
+      dailyChart.update("none"); /* i3 */
+    }
+
+    /********* i4: fast last-14 table *********/
+    function renderDailyTable(){
+      const m = getMachine();
+      const tb = $("dailyTable");
+
+      const keys = Object.keys(m.entryByDate || {}).sort((a,b)=>b.localeCompare(a)).slice(0,14);
+      if(keys.length===0){
+        tb.innerHTML = `<tr><td colspan="5" class="muted">Yozuv yo‘q</td></tr>`;
+        return;
+      }
+
+      let html = "";
+      for(const d of keys){
+        const e = m.entryByDate[d];
+        html += `
+          <tr>
+            <td><b>${e.date}</b></td>
+            <td class="right">${fmt(e.revenue)}</td>
+            <td class="right">${fmt(e.toyAdd)}</td>
+            <td>${e.note ? e.note : "<span class='tiny'>—</span>"}</td>
+            <td class="right">
+              <button class="btn danger" style="padding:8px 10px; border-radius:12px" data-del="${e.id}">O‘chirish</button>
+            </td>
+          </tr>
+        `;
+      }
+      tb.innerHTML = html;
+
+      tb.querySelectorAll("[data-del]").forEach(btn=>{
+        btn.onclick = ()=>deleteDailyEntry(btn.dataset.del);
+      });
+    }
+
+    /********* Report *********/
+    function calcWeek(){
+      const m = getMachine();
+      const start = $("weekStart").value;
+      const end = $("weekEnd").value;
+
+      if(!start || !end || start>end){
+        toast("⚠️ Sana xato");
+        return null;
+      }
+
+      const days = betweenDays(start, end);
+      if(days<=0){ toast("⚠️ Oraliq xato"); return null; }
+
+      let revenue = 0, toyAdded = 0;
+      const map = m.entryByDate || {};
+      for(const date in map){
+        if(date>=start && date<=end){
+          revenue += Number(map[date].revenue||0);
+          toyAdded += Number(map[date].toyAdd||0);
+        }
+      }
+
+      const invStart = Number($("invStart").value || 0);
+      const invEnd = Number($("invEnd").value || 0);
+
+      const cogs = (invStart + toyAdded) - invEnd;
+      const rent = calcRentForDays(m, days);
+      const other = (Number(m.weeklyOtherCost||0) / 7) * days;
+      const profit = revenue - cogs - rent - other;
+
+      $("rRevenue").textContent = fmt(revenue);
+      $("rCOGS").textContent = fmt(cogs);
+      $("rRent").textContent = fmt(rent);
+      $("rProfit").textContent = fmt(profit);
+
+      const text =
+`📌 PRIZE LAND — Hisobot
+🕹 Apparat: ${m.name}
+📅 Oraliq: ${start} → ${end} (${days} kun)
+
+💰 Tushum: ${fmt(revenue)} so‘m
+🧸 Qo‘shilgan o‘yinchoq: ${fmt(toyAdded)} so‘m
+
+📦 Inventar:
+- Bosh: ${fmt(invStart)} so‘m
+- Oxir: ${fmt(invEnd)} so‘m
+
+🧾 COGS: ${fmt(cogs)} so‘m
+🏢 Arenda: ${fmt(rent)} so‘m
+🧰 Qo‘shimcha: ${fmt(other)} so‘m ${m.weeklyOtherNote ? `(${m.weeklyOtherNote})` : ""}
+
+✅ Sof foyda: ${fmt(profit)} so‘m
+Formula: Sof foyda = Tushum − COGS − Arenda − Qo‘shimcha xarajat
+`;
+      $("reportText").value = text;
+
+      return {start, end, days, revenue, toyAdded, invStart, invEnd, cogs, rent, otherCost: other, profit, text};
+    }
+
+    function saveWeekReport(){
+      const m = getMachine();
+      const result = calcWeek();
+      if(!result) return;
+
+      const report = { id: uid(), createdAt: new Date().toISOString(), ...result };
+      m.reports.unshift(report);
+      saveDB();
+      toast("💾 Hisobot saqlandi");
+      renderReportsTable();
+    }
+
+    function renderReportsTable(){
+      const m = getMachine();
+      const tb = $("reportsTable");
+      if(!tb) return;
+
+      if(!m.reports || m.reports.length===0){
+        tb.innerHTML = `<tr><td colspan="6" class="muted">Hisobot yo‘q</td></tr>`;
+        return;
+      }
+
+      let html = "";
+      for(const r of m.reports.slice(0,20)){
+        html += `
+          <tr>
+            <td><b>${r.start}</b> → <b>${r.end}</b><div class="tiny">${r.days} kun</div></td>
+            <td class="right">${fmt(r.revenue)}</td>
+            <td class="right">${fmt(r.cogs)}</td>
+            <td class="right">${fmt(r.rent)}</td>
+            <td class="right"><b>${fmt(r.profit)}</b></td>
+            <td class="right">
+              <button class="btn" style="padding:8px 10px; border-radius:12px" data-open="${r.id}">Ochish</button>
+              <button class="btn danger" style="padding:8px 10px; border-radius:12px" data-delr="${r.id}">O‘chirish</button>
+            </td>
+          </tr>
+        `;
+      }
+      tb.innerHTML = html;
+
+      tb.querySelectorAll("[data-open]").forEach(b=>{
+        b.onclick = ()=>{
+          const r = getMachine().reports.find(x=>x.id===b.dataset.open);
+          if(!r) return;
+          $("weekStart").value = r.start;
+          $("weekEnd").value = r.end;
+          $("invStart").value = r.invStart;
+          $("invEnd").value = r.invEnd;
+          $("reportText").value = r.text;
+          $("rRevenue").textContent = fmt(r.revenue);
+          $("rCOGS").textContent = fmt(r.cogs);
+          $("rRent").textContent = fmt(r.rent);
+          $("rProfit").textContent = fmt(r.profit);
+          toast("📄 Ochildi", `${r.start} → ${r.end}`);
+        };
+      });
+
+      tb.querySelectorAll("[data-delr]").forEach(b=>{
+        b.onclick = ()=>{
+          const m = getMachine();
+          m.reports = m.reports.filter(x=>x.id!==b.dataset.delr);
+          saveDB();
+          toast("🗑 O‘chirildi");
+          renderReportsTable();
+        };
+      });
+    }
+
+    /********* Reset / Wipe (i8: export yo‘q) *********/
+    function resetActiveMachine(){
+      const m = getMachine();
+      if(!confirm("Tanlangan apparat ma’lumotlari o‘chsinmi?")) return;
+      m.entryByDate = {};
+      m.reports = [];
+      saveDB();
+      toast("🗑 Tozalandi", m.name);
+      requestRender();
+    }
+
+    function wipeAll(){
+      if(!confirm("HAMMASI o‘chadi. Davom etasizmi?")) return;
+      localStorage.removeItem(LS_KEY);
+      DB = defaultData();
+      DB.activeMachineId = DB.machines[0].id;
+      saveDB();
+      toast("🧨 Tozalandi");
+      renderMachineSelect();
+      requestRender();
+      openTab("dashboard");
+    }
+
+    function addDemoData(){
+      const m = getMachine();
+      const base = todayISO();
+      for(let i=0;i<7;i++){
+        const d = addDays(base, -i);
+        m.entryByDate[d] = {
+          id: uid(),
+          date: d,
+          revenue: Math.round(160000 + Math.random()*180000),
+          toyAdd: Math.round(Math.random()*60000),
+          note: ""
+        };
+      }
+      if(!m.monthlyRent) m.monthlyRent = 1000000;
+      if(!m.monthDays) m.monthDays = 30;
+      saveDB();
+      toast("🧪 Demo");
+      requestRender();
+      openTab("dashboard");
+    }
+
+    async function copyReport(){
+      const txt = ($("reportText").value || "").trim();
+      if(!txt){ toast("⚠️ Matn yo‘q"); return; }
+      try{
+        await navigator.clipboard.writeText(txt);
+        toast("📋 Nusxa");
+      }catch(e){
+        $("reportText").select();
+        document.execCommand("copy");
+        toast("📋 Nusxa");
+      }
+    }
+
+    /********* Events *********/
+    $("btnAddDaily").addEventListener("click", addDailyEntry);
+
+    $("weekPreset").addEventListener("change", ()=>{
+      renderKPIs();
+      requestChart();
+    });
+
+    $("btnCalcWeek").addEventListener("click", ()=>{
+      const r = calcWeek();
+      if(r) toast("✅ Hisoblandi", `Sof foyda: ${fmt(r.profit)} so‘m`);
+    });
+
+    $("btnSaveWeekReport").addEventListener("click", saveWeekReport);
+    $("btnCopyReport").addEventListener("click", copyReport);
+
+    $("btnFillExample").addEventListener("click", ()=>{
+      $("dailyDate").value = todayISO();
+      $("dailyRevenue").value = 250000;
+      $("dailyToyAdd").value = 50000;
+      $("dailyNote").value = "";
+      toast("✨ Tayyor");
+    });
+
+    $("btnReset").addEventListener("click", resetActiveMachine);
+    $("btnReset2").addEventListener("click", resetActiveMachine);
+
+    $("btnDemoData").addEventListener("click", addDemoData);
+    $("btnWipeAll").addEventListener("click", wipeAll);
+    $("btnDemoData2").addEventListener("click", addDemoData);
+    $("btnWipeAll2").addEventListener("click", wipeAll);
+
+    $("btnSaveSettings").addEventListener("click", saveSettings);
+    $("btnAddMachine").addEventListener("click", addMachine);
+    $("btnSaveOtherCost").addEventListener("click", saveOtherCost);
+
+    // i3: debounce settings save (i7: admin sahifasidagi inputlar)
+    let saveT = null;
+    ["machineName","monthlyRent","monthDays"].forEach(id=>{
+      $(id).addEventListener("input", ()=>{
+        clearTimeout(saveT);
+        saveT = setTimeout(()=>saveSettings(), 400);
+      });
+    });
+
+    /********* Init *********/
+    (function init(){
+      if(!DB.activeMachineId) DB.activeMachineId = DB.machines[0]?.id || null;
+
+      renderMachineSelect();
+      syncSettingsInputs();
+
+      if(!$("dailyDate").value) $("dailyDate").value = todayISO();
+
+      if(!$("weekStart").value || !$("weekEnd").value){
+        const end = todayISO();
+        const start = addDays(end, -6);
+        $("weekStart").value = start;
+        $("weekEnd").value = end;
+      }
+
+      requestRender();
+      openTab("dashboard");
+    })();
+  </script>
+</body>
+</html>
